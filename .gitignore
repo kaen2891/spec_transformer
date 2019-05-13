@@ -7,3 +7,6 @@ testfemale
 testmale
 Mel_S
 *.png
+data_classifiy_child.py
+data_classify.py
+data_sph.py
