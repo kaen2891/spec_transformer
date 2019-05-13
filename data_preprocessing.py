@@ -9,22 +9,24 @@ import soundfile as sf
 import matplotlib.pyplot as plt
 import mel_to_inverse
 
-input_nfft = 0.032
-input_stride = 0.010
+frame_length = 0.032
+frame_stride = 0.010
 sr = 16000
 length_of_nmel = 40
 
-def extract_phase_mag(data):
-    y, sr = librosa.load(data, sr=16000)
-    D1 = librosa.stft(y)
-    print("D1의 shape:", np.shape(D1))
-
-def here_vad(glob_list, save_dir):
+def save_vad_wav(glob_list, save_dir):
     for i in range(len(glob_list)):
         (dir, file_id) = os.path.split(glob_list[i])  # dir + filename.pcm
         (dir_dir, speaker_id) = os.path.split(dir)
         print("file_id is {} and speaker_id is {}".format(file_id, speaker_id))
         vad.june_vad(save_dir, speaker_id, glob_list[i])
+
+def extract_phase_mag(data, fs):
+    y, sr = librosa.load(data, sr=fs)
+    D1 = librosa.stft(y)
+    print("D1의 shape:", np.shape(D1))
+
+
 
 def check_max_length(glob_list):
     ''' check wav max length  '''
@@ -36,27 +38,17 @@ def check_max_length(glob_list):
             length_max = wav_length
     return length_max
 
-def extract_wav_Mel_Spectrogram(glob_list):
-    # print("emotion array length is ",len(glob_list))
-    num_data = len(glob_list)
+def extract_wav_Mel_Spectrogram(glob_list, fs, frame_length, frmae_stride):
     Mel_Spectrogram_padding_list = []
+    ''' Extract Mel Spectrogram'''
+    ''' It needs wav_file, fs, frame_length, frame_stride'''
+    ''' Here, wav_file: glob_list[k], fs = 16000, frame_length = 0.032, frame_stride = 0.010'''
     for k in range(len(glob_list)):
-        # data = np.zeros((40,glob_list[k].shape(1)))
-        # print("data shape is :", data.shape)
-        Mel_Spectrogram = extract_Mel_Spectrogram.jun_Mel_S(glob_list[k])
-        #print("{}th Mel_Spectrogram shape: {}".format(k,np.shape(Mel_Spectrogram)))
-        # count_second = len(Mel_Spectrogram[1])
-        '''
-        if count_second > 700:
-            new_Mel_S = Mel_Spectrogram[:,:700]
-        else:
-            new_Mel_S = 700 - count_second
-            npad = ((0,0), (0, new_Mel_S))
-            new_Mel_S = np.pad(Mel_Spectrogram, npad, 'constant', constant_values=(0))
-        '''
-
+        Mel_Spectrogram = extract_Mel_Spectrogram.Mel_S(glob_list[k], fs, frame_length, frmae_stride)
         Mel_Spectrogram_padding_list.append(Mel_Spectrogram)
     return Mel_Spectrogram_padding_list
+
+
 
 def divide_tvt(glob_list, gender):
     train_filename = 'train_Mels'
@@ -188,105 +180,100 @@ def cut_and_save_mels(female_dataset, male_dataset, length_of_nmel, save_cut_dir
         man_mel_spec.mel2stft()
 
 
-man_original_data = '/mnt/junewoo/workspace/transform/test_wav/man_wav1.wav'
-down_sample(man_original_data, 16000, 8000)
+def data_preprop():
+
+    # Down-Sampling Test
+    # man_original_data = '/mnt/junewoo/workspace/transform/test_wav/man_wav1.wav'
+    # down_sample(man_original_data, 16000, 8000)
 
 
-#done
-# public_data = glob('/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/public/*/*.wav')
-# vad_save_dir = '/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/public_vad_result/'
-# here_vad(public_data, vad_save_dir)
+    # load all wav files and process with vad (cut silence)
+    public_data = glob('/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/public/*/*.wav') #from data folder. change dir
+    vad_save_dir = '/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/public_vad_result/' #from data folder. change dir
+    save_vad_wav(public_data, vad_save_dir)
 
-vad_public_data = glob('/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/public_vad_result/*/*.wav')
-# check_length = check_max_length(vad_public_data)
-# print(check_length)
+    # check max legnth of all wavs
+    vad_wav = glob('/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/public_vad_result/*/*.wav')
+    check_length = check_max_length(vad_wav)
 
-# extract for Mel_Spectrogram
-# Mel_S = extract_wav_Mel_Spectrogram(vad_public_data)
-# print("final shape is :", len(Mel_S))
+    #extract for Mel_Spectrogram
+    Mel_S = extract_wav_Mel_Spectrogram(vad_wav, sr, frame_length, frame_stride)
 
-# save
-# with open('./Mel_S', 'wb') as fp:
-#     pickle.dump(Mel_S, fp)
-# falys0,masch0
+    # save all mel_spec
+    # with open('./Mel_S', 'wb') as fp:
+    #     pickle.dump(Mel_S, fp)
 
-# load
-# with open('./Mel_S', 'rb') as file:
-#     Mel_Spec = pickle.load(file)
-#
-# # length check
-# for i in range(len(Mel_Spec)):
-#     print("{}th shape is {} ".format(i, np.shape(Mel_Spec[i])))
+    # load all mel_spec
+    # with open('./Mel_S', 'rb') as file:
+    #     Mel_Spec = pickle.load(file)
 
+    # get 1 pair(female, male) dataset
+    vad_female_data = sorted(glob('/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/public_vad_result/falys0/*.wav'))
+    vad_male_data = sorted(glob('/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/public_vad_result/masch0/*.wav'))
 
-vad_female_data = sorted(glob('/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/public_vad_result/falys0/*.wav'))
-vad_male_data = sorted(glob('/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/public_vad_result/masch0/*.wav'))
+    # get mel_spectrogram
+    female_Mel_S = extract_wav_Mel_Spectrogram(vad_female_data, sr, frame_length, frame_stride)
+    male_Mel_S = extract_wav_Mel_Spectrogram(vad_male_data, sr, frame_length, frame_stride)
 
-# print(vad_female_data)
-# print(vad_male_data)
-# print("female len is {} and male length is {}".format(len(vad_female_data), len(vad_male_data)))
-# female_Mel_S = extract_wav_Mel_Spectrogram(vad_female_data)
-# male_Mel_S = extract_wav_Mel_Spectrogram(vad_male_data)
-# gender = 'female'
-# divide_tvt(female_Mel_S, gender)
-# gender = 'male'
-# divide_tvt(male_Mel_S, gender)
+    # divide train / valid / test set (0.7 : 0.15 : 0.15)
+    gender = 'female'
+    divide_tvt(female_Mel_S, gender)
+    gender = 'male'
+    divide_tvt(male_Mel_S, gender)
 
-with open('/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/vad_result/train/male/train_Mels', 'rb') as file:
-    train_Male = pickle.load(file)
-with open('/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/vad_result/train/female/train_Mels', 'rb') as file:
-    train_Female = pickle.load(file)
-with open('/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/vad_result/valid/male/valid_Mels', 'rb') as file:
-    valid_Male = pickle.load(file)
-with open('/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/vad_result/valid/female/valid_Mels', 'rb') as file:
-    valid_Female = pickle.load(file)
-with open('/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/vad_result/test/male/test_Mels', 'rb') as file:
-    test_Male = pickle.load(file)
-with open('/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/vad_result/test/female/test_Mels', 'rb') as file:
-    test_Female = pickle.load(file)
+    # save female, male train/valid/test set
+    with open('/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/vad_result/train/male/train_Mels', 'rb') as file:
+        train_Male = pickle.load(file)
+    with open('/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/vad_result/train/female/train_Mels', 'rb') as file:
+        train_Female = pickle.load(file)
+    with open('/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/vad_result/valid/male/valid_Mels', 'rb') as file:
+        valid_Male = pickle.load(file)
+    with open('/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/vad_result/valid/female/valid_Mels', 'rb') as file:
+        valid_Female = pickle.load(file)
+    with open('/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/vad_result/test/male/test_Mels', 'rb') as file:
+        test_Male = pickle.load(file)
+    with open('/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/vad_result/test/female/test_Mels', 'rb') as file:
+        test_Female = pickle.load(file)
 
-
-cut_dir = '/mnt/junewoo/workspace/transform/pair_1_dataset/'
-set_name = 'train'
-save_dir = os.path.join(cut_dir, set_name)
-cut_and_save_mels(train_Female, train_Male, length_of_nmel, save_dir, set_name)
-print("train finish")
-set_name = 'valid'
-save_dir = os.path.join(cut_dir, set_name)
-cut_and_save_mels(valid_Female, valid_Male, length_of_nmel, save_dir, set_name)
-print("valid finish")
-set_name = 'test'
-save_dir = os.path.join(cut_dir, set_name)
-cut_and_save_mels(test_Female, test_Male, length_of_nmel, save_dir, set_name)
-print("test finish")
+    # equal 2 dataset
+    cut_dir = '/mnt/junewoo/workspace/transform/pair_1_dataset/'
+    set_name = 'train'
+    save_dir = os.path.join(cut_dir, set_name)
+    cut_and_save_mels(train_Female, train_Male, length_of_nmel, save_dir, set_name)
+    print("train finish")
+    set_name = 'valid'
+    save_dir = os.path.join(cut_dir, set_name)
+    cut_and_save_mels(valid_Female, valid_Male, length_of_nmel, save_dir, set_name)
+    print("valid finish")
+    set_name = 'test'
+    save_dir = os.path.join(cut_dir, set_name)
+    cut_and_save_mels(test_Female, test_Male, length_of_nmel, save_dir, set_name)
+    print("test finish")
 
 
+    #
+    # # origin_a
+    # save_dir = '/mnt/junewoo/workspace/transform/test_wav/cut_shape/'
+    # file_save_name = 'ori_mel_female'
+    # a_ori_test = mel_to_inverse.Convert2Wav(wav=None, mel_spec=train_Female[0], frame_length=input_nfft, frame_stride=input_stride, sr=sr, save_dir=save_dir, save_name=file_save_name)
+    # a_ori_test.mel2stft()
+    # # cut_a
+    # # print("check:", new_Mel_train_a.shape[0])
+    # save_dir = '/mnt/junewoo/workspace/transform/test_wav/cut_shape/'
+    # file_save_name = 'cut_mel_female'
+    # a_test = mel_to_inverse.Convert2Wav(wav=None, mel_spec=cut_a, frame_length=input_nfft, frame_stride=input_stride, sr=sr, save_dir=save_dir, save_name=file_save_name)
+    # a_test.mel2stft()
+    #
+    # # origin_b
+    # save_dir = '/mnt/junewoo/workspace/transform/test_wav/cut_shape/'
+    # file_save_name = 'ori_mel_male'
+    # b_ori_test = mel_to_inverse.Convert2Wav(wav=None, mel_spec=train_Male[0], frame_length=input_nfft, frame_stride=input_stride, sr=sr, save_dir=save_dir, save_name=file_save_name)
+    # b_ori_test.mel2stft()
+    # # cut_b
+    # save_dir = '/mnt/junewoo/workspace/transform/test_wav/cut_shape/'
+    # file_save_name = 'cut_mel_male'
+    # b_test = mel_to_inverse.Convert2Wav(wav=None, mel_spec=cut_b, frame_length=input_nfft, frame_stride=input_stride, sr=sr, save_dir=save_dir, save_name=file_save_name)
+    # b_test.mel2stft()
 
-# print(np.shape(man_train))
-# extract_stft_data = '/mnt/junewoo/speech/KAIST_wav/new_Korean_Voice_DB/public_vad_result/falys0/PBSG001.wav'
-# extract_phase_mag(extract_stft_data)
-
-
-#
-# # origin_a
-# save_dir = '/mnt/junewoo/workspace/transform/test_wav/cut_shape/'
-# file_save_name = 'ori_mel_female'
-# a_ori_test = mel_to_inverse.Convert2Wav(wav=None, mel_spec=train_Female[0], frame_length=input_nfft, frame_stride=input_stride, sr=sr, save_dir=save_dir, save_name=file_save_name)
-# a_ori_test.mel2stft()
-# # cut_a
-# # print("check:", new_Mel_train_a.shape[0])
-# save_dir = '/mnt/junewoo/workspace/transform/test_wav/cut_shape/'
-# file_save_name = 'cut_mel_female'
-# a_test = mel_to_inverse.Convert2Wav(wav=None, mel_spec=cut_a, frame_length=input_nfft, frame_stride=input_stride, sr=sr, save_dir=save_dir, save_name=file_save_name)
-# a_test.mel2stft()
-#
-# # origin_b
-# save_dir = '/mnt/junewoo/workspace/transform/test_wav/cut_shape/'
-# file_save_name = 'ori_mel_male'
-# b_ori_test = mel_to_inverse.Convert2Wav(wav=None, mel_spec=train_Male[0], frame_length=input_nfft, frame_stride=input_stride, sr=sr, save_dir=save_dir, save_name=file_save_name)
-# b_ori_test.mel2stft()
-# # cut_b
-# save_dir = '/mnt/junewoo/workspace/transform/test_wav/cut_shape/'
-# file_save_name = 'cut_mel_male'
-# b_test = mel_to_inverse.Convert2Wav(wav=None, mel_spec=cut_b, frame_length=input_nfft, frame_stride=input_stride, sr=sr, save_dir=save_dir, save_name=file_save_name)
-# b_test.mel2stft()
+if __name__ == '__main__':
+    data_preprop()
