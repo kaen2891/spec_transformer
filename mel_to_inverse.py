@@ -25,23 +25,21 @@ class Convert2Wav:
         self.mel_nfft = int(round(self.sr * self.frame_length))
         self.mel_hoplength = int(round(self.sr * self.frame_stride))
 
-    def mel2stft(self):
+    def mel2wav(self):
         stft = librosa.feature.inverse.mel_to_stft(self.mel_spec, n_fft=self.mel_nfft, sr=self.sr)
 
         # method griffin
         spec_inverse = librosa.core.griffinlim(stft, n_iter=32, hop_length=self.mel_hoplength, window='hann')
 
         # method mel_to_audio
-        #print("mel2stft save dir is :", self.save_dir)
         final_dir = os.path.join(self.save_dir, self.save_name)
         sf.write(final_dir+'_inverse.wav', spec_inverse, self.sr, format='WAV', endian='LITTLE', subtype='PCM_16')
         print("saved name {} finished ".format(final_dir))
 
-    def wav2mel(self):
-        # y, sr = librosa.load(wav_dir, sr=16000)
-        Mel_Spectrogram = extract_Mel_Spectrogram.Mel_S(self.wav, self.sr)
-        print('Mel shape is :', np.shape(Mel_Spectrogram))
-        return Mel_Spectrogram
+    # def wav2mel(self):
+    #     Mel_Spectrogram = extract_Mel_Spectrogram.Mel_S(self.wav, self.sr, self.frame_length, self.frame_stride)
+    #     print('Mel shape is :', np.shape(Mel_Spectrogram))
+    #     return Mel_Spectrogram
 
     '''
     def spec2wav(self):
