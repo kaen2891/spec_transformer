@@ -168,14 +168,14 @@ def cut_and_save_mels(female_dataset, male_dataset, length_of_nmel, save_cut_dir
 
     for k in range(len(woman_set)):
         file_save_name = 'cut_female{}'.format(k+1)
-        woman_mel_spec = mel_to_inverse.Convert2Wav(wav=None, mel_spec=woman_set[k], frame_length=input_nfft,
-                                                  frame_stride=input_stride, sr=sr, save_dir=save_cut_dir,
+        woman_mel_spec = mel_to_inverse.Convert2Wav(wav=None, mel_spec=woman_set[k], frame_length=frame_length,
+                                                  frame_stride=frame_stride, sr=sr, save_dir=save_cut_dir,
                                                   save_name=file_save_name)
         woman_mel_spec.mel2stft()
 
         file_save_name = 'cut_male{}'.format(k + 1)
-        man_mel_spec = mel_to_inverse.Convert2Wav(wav=None, mel_spec=man_set[k], frame_length=input_nfft,
-                                                  frame_stride=input_stride, sr=sr, save_dir=save_cut_dir,
+        man_mel_spec = mel_to_inverse.Convert2Wav(wav=None, mel_spec=man_set[k], frame_length=frame_length,
+                                                  frame_stride=frame_stride, sr=sr, save_dir=save_cut_dir,
                                                   save_name=file_save_name)
         man_mel_spec.mel2stft()
 
