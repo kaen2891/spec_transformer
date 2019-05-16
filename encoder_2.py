@@ -10,7 +10,7 @@ import tensorflow as tf
 # # dropout_rate  = 0.2   # Rate of the dropout layers
 # # batch_size    = 64    # Batch size
 # # epochs        = 30    # Number of epochs
-# #
+
 # # encoder_input = Input(shape=(None,))
 # #
 # # # Hidden layers of the encoder :
