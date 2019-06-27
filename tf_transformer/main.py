@@ -7,11 +7,30 @@ import sys
 import pickle
 from configs import DEFINES
 import matplotlib.pyplot as plt
+import librosa
+import librosa.display
+from datetime import datetime
 
 tf.reset_default_graph()
-os.environ['CUDA_VISIBLE_DEVICES']='6'
-# DATA_OUT_PATH = './data_out/'
+os.environ['CUDA_VISIBLE_DEVICES']='2'
+RESULT_FIGURE = '/mnt/junewoo/workspace/transform/train_result_figure/'
 
+
+def plot_melspec(name, predict_result):
+    now = datetime.now()
+    frame_length = 0.32
+    frame_stride = 0.1  # length / 0.1
+    fs = 16000
+    input_stride = int(round(fs * frame_stride))
+
+    librosa.display.specshow(librosa.power_to_db(predict_result, ref=np.max), y_axis='mel', sr=fs,
+                             hop_length=input_stride,
+                             x_axis='time')
+    plt.colorbar(format='%+2.0f dB')
+    plt.title('Mel-Spectrogram')
+    plt.tight_layout()
+    plt.savefig(RESULT_FIGURE + '/'+'{}-{}-{}'.format(now.day, now.hour, now.minute)+name+'transformer_Mel-Spectrogram.png')
+    plt.show()
 
 def main(self):
     # data_out_path = os.path.join(os.getcwd(), DATA_OUT_PATH)
@@ -19,14 +38,22 @@ def main(self):
     # # 데이터를 통한 사전 구성 한다.
     # char2idx, idx2char, vocabulary_length = data.load_vocabulary()
 
-    with open('/mnt/junewoo/workspace/transform/test_head/x_train', 'rb') as file:
+    # with open('/mnt/junewoo/workspace/transform/test_head/x_train', 'rb') as file:
+    #     X_train = pickle.load(file)
+    # with open('/mnt/junewoo/workspace/transform/test_head/y_train', 'rb') as file:
+    #     Y_train = pickle.load(file)
+    # with open('/mnt/junewoo/workspace/transform/log_mel/log_X', 'rb') as file:
+    #     X_train = pickle.load(file)
+    # with open('/mnt/junewoo/workspace/transform/log_mel/log_Y', 'rb') as file:
+    #     Y_train = pickle.load(file)
+    with open('/mnt/junewoo/workspace/transform/log_mel/log_s2_X', 'rb') as file:
         X_train = pickle.load(file)
-    with open('/mnt/junewoo/workspace/transform/test_head/y_train', 'rb') as file:
+    with open('/mnt/junewoo/workspace/transform/log_mel/log_s2_Y', 'rb') as file:
         Y_train = pickle.load(file)
-    with open('/mnt/junewoo/workspace/transform/test_head/x_val', 'rb') as file:
-        X_val = pickle.load(file)
-    with open('/mnt/junewoo/workspace/transform/test_head/y_val', 'rb') as file:
-        Y_val = pickle.load(file)
+    # with open('/mnt/junewoo/workspace/transform/test_head/x_val', 'rb') as file:
+    #     X_val = pickle.load(file)
+    # with open('/mnt/junewoo/workspace/transform/test_head/y_val', 'rb') as file:
+    #     Y_val = pickle.load(file)
     with open('/mnt/junewoo/workspace/transform/test_head/x_test', 'rb') as file:
         X_test = pickle.load(file)
     with open('/mnt/junewoo/workspace/transform/test_head/y_test', 'rb') as file:
@@ -37,6 +64,10 @@ def main(self):
     # 훈련 데이터와 테스트 데이터를 가져온다.
     # train_input, train_label, test_input, test_label = X_train, Y_train, X_test, Y_test
 
+    X_train = X_train[0]
+    X_train = X_train[np.newaxis]
+    Y_train = Y_train[0]
+    Y_train = Y_train[np.newaxis]
     # 훈련셋 인코딩 만드는 부분이다.
     train_input_enc, train_input_enc_length = np.asarray(X_train), 60
 
@@ -63,6 +94,14 @@ def main(self):
     # OSError가 발생한다.
     os.makedirs(check_point_path, exist_ok=True)
 
+    predic_input_enc = np.asarray(X_train)
+    print(np.shape(predic_input_enc))
+    predic_output_dec = np.zeros((1, 60, 128))
+    predic_output_dec = np.float32(predic_output_dec)
+    predic_target_dec = np.zeros((1, 60, 128))
+    predic_target_dec = np.float32(predic_target_dec)
+
+
     # print(train_input_enc)
     print(np.shape(train_input_enc))
     print("type:",type(train_input_enc))
@@ -81,14 +120,34 @@ def main(self):
             'layer_size': DEFINES.layer_size,
             'max_sequence_length': DEFINES.max_sequence_length,
             'dropout_width': DEFINES.dropout_width
-            # 'dropout_rate': DEFINES.drop
-            # 'vocabulary_length': 60
-            # 'xavier_initializer': DEFINES.xavier_initializer
         })
     # print("input_enc type {} output_dec type {} target_dec type {}".format(type(train_input_enc), type(train_output_dec), type(train_target_dec)))
+
+    # global_step = classifier.get_variable_value("global_step")
+    # print("global_step is ", global_step)
+
+    # if global_step % 1000 == 0:
+    #     predictions = classifier.predict(
+    #         input_fn=lambda: data.eval_input_fn(predic_input_enc, predic_output_dec, predic_target_dec, 1))
+    #     a = []
+    #     for prediction in predictions:
+    #         a.append(prediction)
+    #     result = [i['logits'] for i in a]
+    #     predict_input_enc = result[0]
+    #     final_predict_input_enc = np.transpose(predict_input_enc, (1, 0))
+    #     name = str(global_step)
+    #     print("type of name is", type(name))
+    #     print("---------the name is ", name)
+    #     # print(type(str(name)))
+    #
+    #     print("type of name is", type(name))
+    #     plot_melspec(name+"steps", final_predict_input_enc)
+
     # 학습 실행
     classifier.train(input_fn=lambda: data.train_input_fn(
         train_input_enc, train_output_dec, train_target_dec, DEFINES.batch_size), steps=DEFINES.train_steps)
+
+    # global_step = classifier.get_variable_value("global_step")
 
     # eval_loss = classifier.evaluate(input_fn= lambda: data.eval_input_fn(eval_input_enc, eval_output_dec, eval_target_dec, DEFINES.batch_size))
     # total_loss.append(eval_loss)
